@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}教师认证申请{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">教师认证申请</h5>
+            </div>
+            <div class="card-body">
+                <!-- 认证说明 -->
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading">认证说明</h5>
+                    <p class="mb-0">
+                        1. 请上传您的教师资格证照片，确保图片清晰可见。<br>
+                        2. 填写您的教学经历和专业领域。<br>
+                        3. 我们会在3个工作日内完成审核。<br>
+                        4. 认证通过后，您将获得发布课程的权限。
+                    </p>
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- 证书上传 -->
+                    <div class="mb-4">
+                        <label for="certificate" class="form-label">教师资格证照片</label>
+                        <input type="file" class="form-control" id="certificate" name="certificate" accept="image/*" required>
+                        <div class="form-text">支持jpg、png格式，大小不超过5MB</div>
+                        <div class="mt-2" id="certificate-preview"></div>
+                    </div>
+
+                    <!-- 教学经历和专业领域 -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label">教学经历和专业领域</label>
+                        <textarea class="form-control" id="description" name="description" rows="5" required
+                                  placeholder="请详细描述您的教学经历、专业领域和技能特长..."></textarea>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary ms-2">返回</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 证书预览
+document.getElementById('certificate').addEventListener('change', function(e) {
+    const preview = document.getElementById('certificate-preview');
+    preview.innerHTML = '';
+    
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'img-fluid mt-2';
+            img.style.maxHeight = '300px';
+            preview.appendChild(img);
+        }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
+</script>
+{% endblock %} 

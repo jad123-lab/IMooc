@@ -1,0 +1,205 @@
+{% extends "admin/base.html" %}
+
+{% block title %}评论管理 - {{ block.super }}{% endblock %}
+
+{% block comment_active %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">评论管理</h1>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mx-sm-3 mb-2">
+                    <input type="text" class="form-control" name="content" placeholder="评论内容" value="{{ request.GET.content }}">
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <input type="text" class="form-control" name="username" placeholder="用户名" value="{{ request.GET.username }}">
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <input type="text" class="form-control" name="video" placeholder="视频标题" value="{{ request.GET.video }}">
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <select class="form-control" name="status">
+                        <option value="">所有状态</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>正常</option>
+                        <option value="deleted" {% if request.GET.status == 'deleted' %}selected{% endif %}>已删除</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">搜索</button>
+                <a href="{% url 'admin:comment_list' %}" class="btn btn-secondary mb-2 ml-2">重置</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- 评论列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">评论列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" class="select-all">
+                            </th>
+                            <th>ID</th>
+                            <th>用户</th>
+                            <th>视频</th>
+                            <th>评论内容</th>
+                            <th>点赞数</th>
+                            <th>回复数</th>
+                            <th>发布时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comment in comments %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="select-item" value="{{ comment.id }}">
+                            </td>
+                            <td>{{ comment.id }}</td>
+                            <td>
+                                <a href="{% url 'admin:user_detail' comment.user.id %}">
+                                    {{ comment.user.username }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'admin:video_detail' comment.video.id %}">
+                                    {{ comment.video.title|truncatechars:30 }}
+                                </a>
+                            </td>
+                            <td>{{ comment.content|truncatechars:50 }}</td>
+                            <td>{{ comment.likes }}</td>
+                            <td>{{ comment.replies.count }}</td>
+                            <td>{{ comment.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="badge badge-{% if comment.is_deleted %}danger{% else %}success{% endif %}">
+                                    {{ comment.is_deleted|yesno:"已删除,正常" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" 
+                                            data-bs-target="#viewModal" data-comment-id="{{ comment.id }}"
+                                            data-comment-content="{{ comment.content }}"
+                                            data-comment-user="{{ comment.user.username }}"
+                                            data-comment-time="{{ comment.created_at|date:'Y-m-d H:i' }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if not comment.is_deleted %}
+                                    <a href="{% url 'admin:comment_delete' comment.id %}" class="btn btn-danger btn-sm delete-confirm">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'admin:comment_restore' comment.id %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-undo"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 批量操作 -->
+            <div class="row">
+                <div class="col-sm-12 col-md-6">
+                    <div class="bulk-actions">
+                        <select class="custom-select" style="width: 200px;">
+                            <option selected>批量操作</option>
+                            <option value="delete">删除</option>
+                            <option value="restore">恢复</option>
+                        </select>
+                        <button class="btn btn-primary bulk-action-btn" disabled>
+                            应用 (<span class="selected-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6">
+                    <!-- 分页 -->
+                    <div class="dataTables_paginate paging_simple_numbers">
+                        <ul class="pagination justify-content-end">
+                            {% if comments.has_previous %}
+                            <li class="paginate_button page-item previous">
+                                <a href="?page={{ comments.previous_page_number }}" class="page-link">上一页</a>
+                            </li>
+                            {% endif %}
+
+                            {% for i in comments.paginator.page_range %}
+                            <li class="paginate_button page-item {% if comments.number == i %}active{% endif %}">
+                                <a href="?page={{ i }}" class="page-link">{{ i }}</a>
+                            </li>
+                            {% endfor %}
+
+                            {% if comments.has_next %}
+                            <li class="paginate_button page-item next">
+                                <a href="?page={{ comments.next_page_number }}" class="page-link">下一页</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 查看评论模态框 -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewModalLabel">评论详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">评论用户</label>
+                    <p id="commentUser" class="form-control-static"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">评论时间</label>
+                    <p id="commentTime" class="form-control-static"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">评论内容</label>
+                    <p id="commentContent" class="form-control-static"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 处理查看评论模态框
+    $('#viewModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var content = button.data('comment-content');
+        var user = button.data('comment-user');
+        var time = button.data('comment-time');
+        
+        $('#commentContent').text(content);
+        $('#commentUser').text(user);
+        $('#commentTime').text(time);
+    });
+});
+</script>
+{% endblock %} 

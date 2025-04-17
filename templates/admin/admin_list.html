@@ -1,0 +1,132 @@
+{% extends "admin/base.html" %}
+
+{% block title %}管理员列表{% endblock %}
+
+{% block user_active %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">管理员列表</h1>
+
+    <!-- 搜索 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="搜索用户名或邮箱">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                </div>
+            </form>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>最后登录</th>
+                            <th>注册时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for admin in admins %}
+                        <tr>
+                            <td>{{ admin.id }}</td>
+                            <td>{{ admin.username }}</td>
+                            <td>{{ admin.email }}</td>
+                            <td>{{ admin.last_login|date:"Y-m-d H:i"|default:"从未登录" }}</td>
+                            <td>{{ admin.date_joined|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="badge {% if admin.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ admin.is_active|yesno:"启用,禁用" }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm {% if admin.is_active %}btn-danger{% else %}btn-success{% endif %} toggle-status"
+                                        data-user-id="{{ admin.id }}"
+                                        data-csrf-token="{{ csrf_token }}">
+                                    {{ admin.is_active|yesno:"禁用,启用" }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if admins.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if admins.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ admins.previous_page_number }}&q={{ search_query }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+
+                    {% for i in admins.paginator.page_range %}
+                    <li class="page-item {% if admins.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}&q={{ search_query }}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if admins.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ admins.next_page_number }}&q={{ search_query }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.toggle-status').click(function() {
+        const button = $(this);
+        const userId = button.data('user-id');
+        const csrfToken = button.data('csrf-token');
+        
+        $.ajax({
+            url: `/admin/users/${userId}/toggle/`,
+            type: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+            success: function(response) {
+                if (response.status === 'success') {
+                    const isActive = response.is_active;
+                    const statusBadge = button.closest('tr').find('.badge');
+                    
+                    // 更新按钮
+                    button.text(isActive ? '禁用' : '启用');
+                    button.removeClass('btn-success btn-danger').addClass(isActive ? 'btn-danger' : 'btn-success');
+                    
+                    // 更新状态标签
+                    statusBadge.text(isActive ? '启用' : '禁用');
+                    statusBadge.removeClass('bg-success bg-danger').addClass(isActive ? 'bg-success' : 'bg-danger');
+                    
+                    // 显示提示消息
+                    showAlert('success', `已${isActive ? '启用' : '禁用'}管理员`);
+                }
+            },
+            error: function() {
+                showAlert('danger', '操作失败，请重试');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

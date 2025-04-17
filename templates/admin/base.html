@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - IMooc管理系统</title>
+    <!-- 使用国内CDN -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="/static/admin/css/admin.css" rel="stylesheet">
+    <!-- jQuery UI CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="wrapper">
+        <!-- 侧边栏 -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>IMooc管理系统</h3>
+            </div>
+
+            <ul class="list-unstyled components">
+                <li class="{% block dashboard_active %}{% endblock %}">
+                    <a href="{% url 'myadmin:dashboard' %}">
+                        <i class="fas fa-home"></i> 控制面板
+                    </a>
+                </li>
+                <li class="{% block user_active %}{% endblock %}">
+                    <a href="#userSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                        <i class="fas fa-users"></i> 用户管理
+                    </a>
+                    <ul class="collapse list-unstyled" id="userSubmenu">
+                        <li><a href="{% url 'myadmin:user_list' %}">用户列表</a></li>
+                        <li><a href="{% url 'myadmin:admin_list' %}">管理员列表</a></li>
+                        <li><a href="{% url 'myadmin:teacher_verification' %}">教师认证</a></li>
+                    </ul>
+                </li>
+                <li class="{% block video_active %}{% endblock %}">
+                    <a href="#videoSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                        <i class="fas fa-video"></i> 视频管理
+                    </a>
+                    <ul class="collapse list-unstyled" id="videoSubmenu">
+                        <li><a href="{% url 'myadmin:video_list' %}">视频列表</a></li>
+                        <li><a href="{% url 'myadmin:video_category' %}">分类管理</a></li>
+                        <li><a href="{% url 'myadmin:video_pending' %}">待审核视频</a></li>
+                    </ul>
+                </li>
+                <li class="{% block comment_active %}{% endblock %}">
+                    <a href="{% url 'myadmin:comment_list' %}">
+                        <i class="fas fa-comments"></i> 评论管理
+                    </a>
+                </li>
+                <li class="{% block stats_active %}{% endblock %}">
+                    <a href="{% url 'myadmin:stats_user' %}">
+                        <i class="fas fa-chart-line"></i> 统计管理
+                    </a>
+                    <ul class="collapse list-unstyled" id="statsSubmenu">
+                        <li><a href="{% url 'myadmin:stats_user' %}">用户统计</a></li>
+                        <li><a href="{% url 'myadmin:stats_video' %}">视频统计</a></li>
+                    </ul>
+                </li>
+                <li class="{% block system_active %}{% endblock %}">
+                    <a href="#systemSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                        <i class="fas fa-cog"></i> 系统设置
+                    </a>
+                    <ul class="collapse list-unstyled" id="systemSubmenu">
+                        <li><a href="{% url 'myadmin:system_profile' %}">个人信息</a></li>
+                        <li><a href="{% url 'myadmin:system_security' %}">安全设置</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- 主要内容区 -->
+        <div id="content">
+            <!-- 顶部导航栏 -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-align-left"></i>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                        <ul class="nav navbar-nav ms-auto">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user"></i> {{ request.user.username }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'myadmin:system_profile' %}">个人信息</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="{% url 'myadmin:logout' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item">退出登录</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- 页面内容 -->
+            <div class="container-fluid">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用国内CDN -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <!-- jQuery UI JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+    <script src="/static/admin/js/admin.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

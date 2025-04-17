@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - IMooc管理系统</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+        .form-signin {
+            width: 100%;
+            max-width: 330px;
+            padding: 15px;
+            margin: auto;
+        }
+        .form-signin .form-floating:focus-within {
+            z-index: 2;
+        }
+        .form-signin input[type="text"] {
+            margin-bottom: -1px;
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+        .form-signin input[type="password"] {
+            margin-bottom: 10px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <main class="form-signin text-center">
+        <form method="post">
+            {% csrf_token %}
+            <h1 class="h3 mb-3 fw-normal">IMooc管理系统</h1>
+            
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                用户名或密码错误，请重试。
+            </div>
+            {% endif %}
+            
+            <div class="form-floating">
+                <input type="text" class="form-control" id="id_username" name="username" placeholder="用户名" required>
+                <label for="id_username">用户名</label>
+            </div>
+            <div class="form-floating">
+                <input type="password" class="form-control" id="id_password" name="password" placeholder="密码" required>
+                <label for="id_password">密码</label>
+            </div>
+
+            <button class="w-100 btn btn-lg btn-primary" type="submit">登录</button>
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <p class="mt-5 mb-3 text-muted">&copy; 2024 IMooc</p>
+        </form>
+    </main>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

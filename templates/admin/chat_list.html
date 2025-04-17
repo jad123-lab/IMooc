@@ -1,0 +1,292 @@
+{% extends "admin/base.html" %}
+
+{% block title %}聊天室管理 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">聊天室管理</h1>
+    
+    <!-- 搜索和筛选 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">搜索和筛选</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-inline mb-3">
+                <input type="text" name="q" class="form-control mr-2" placeholder="搜索聊天室名称/描述/创建者..." value="{{ search_query }}">
+                <select name="is_active" class="form-control mr-2">
+                    <option value="">所有状态</option>
+                    <option value="true" {% if is_active == 'true' %}selected{% endif %}>启用</option>
+                    <option value="false" {% if is_active == 'false' %}selected{% endif %}>禁用</option>
+                </select>
+                <button type="submit" class="btn btn-primary">搜索</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 聊天室列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">聊天室列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>名称</th>
+                            <th>描述</th>
+                            <th>创建者</th>
+                            <th>成员数</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room in rooms %}
+                        <tr>
+                            <td>{{ room.id }}</td>
+                            <td>{{ room.name }}</td>
+                            <td>{{ room.description|truncatechars:50 }}</td>
+                            <td>{{ room.owner.username }}</td>
+                            <td>{{ room.chatroommember_set.count }}</td>
+                            <td>
+                                {% if room.is_active %}
+                                <span class="badge badge-success">启用</span>
+                                {% else %}
+                                <span class="badge badge-danger">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ room.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <button class="btn btn-sm {% if room.is_active %}btn-danger{% else %}btn-success{% endif %} toggle-room" 
+                                        data-id="{{ room.id }}" 
+                                        data-active="{{ room.is_active|yesno:'true,false' }}">
+                                    {{ room.is_active|yesno:'禁用,启用' }}
+                                </button>
+                                <button class="btn btn-info btn-sm view-messages" 
+                                        data-id="{{ room.id }}" 
+                                        data-toggle="modal" 
+                                        data-target="#messagesModal">
+                                    查看消息
+                                </button>
+                                <button class="btn btn-warning btn-sm view-members" 
+                                        data-id="{{ room.id }}" 
+                                        data-toggle="modal" 
+                                        data-target="#membersModal">
+                                    管理成员
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            {% if rooms.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if rooms.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ rooms.previous_page_number }}&q={{ search_query }}&is_active={{ is_active }}">
+                            上一页
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in rooms.paginator.page_range %}
+                    <li class="page-item {% if rooms.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}&q={{ search_query }}&is_active={{ is_active }}">
+                            {{ i }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if rooms.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ rooms.next_page_number }}&q={{ search_query }}&is_active={{ is_active }}">
+                            下一页
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 消息列表模态框 -->
+<div class="modal fade" id="messagesModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">聊天消息</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="messages-container">
+                    <!-- 消息列表将通过AJAX加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 成员列表模态框 -->
+<div class="modal fade" id="membersModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">聊天室成员</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="members-container">
+                    <!-- 成员列表将通过AJAX加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 切换聊天室状态
+    $('.toggle-room').click(function() {
+        var btn = $(this);
+        var roomId = btn.data('id');
+        var isActive = btn.data('active') === 'true';
+        var action = isActive ? '禁用' : '启用';
+        
+        if (confirm('确定要' + action + '这个聊天室吗？')) {
+            $.ajax({
+                url: '/admin/chats/rooms/' + roomId + '/toggle/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    }
+                }
+            });
+        }
+    });
+    
+    // 加载消息列表
+    $('.view-messages').click(function() {
+        var roomId = $(this).data('id');
+        loadMessages(roomId, 1);
+    });
+    
+    // 加载成员列表
+    $('.view-members').click(function() {
+        var roomId = $(this).data('id');
+        loadMembers(roomId, 1);
+    });
+    
+    // 删除消息
+    $(document).on('click', '.delete-message', function() {
+        var btn = $(this);
+        var messageId = btn.data('id');
+        
+        if (confirm('确定要删除这条消息吗？')) {
+            $.ajax({
+                url: '/admin/chats/messages/' + messageId + '/delete/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        btn.closest('tr').fadeOut();
+                    }
+                }
+            });
+        }
+    });
+    
+    // 切换成员禁言状态
+    $(document).on('click', '.toggle-ban', function() {
+        var btn = $(this);
+        var memberId = btn.data('id');
+        var isBanned = btn.data('banned') === 'true';
+        var action = isBanned ? '解除禁言' : '禁言';
+        
+        if (confirm('确定要' + action + '这个成员吗？')) {
+            $.ajax({
+                url: '/admin/chats/members/' + memberId + '/toggle-ban/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        btn.data('banned', response.is_banned);
+                        btn.text(response.is_banned ? '解除禁言' : '禁言');
+                        btn.toggleClass('btn-danger btn-success');
+                    }
+                }
+            });
+        }
+    });
+    
+    // 消息列表分页
+    $(document).on('click', '#messagesModal .pagination .page-link', function(e) {
+        e.preventDefault();
+        var roomId = $('.view-messages').data('id');
+        var page = $(this).data('page');
+        loadMessages(roomId, page);
+    });
+    
+    // 成员列表分页
+    $(document).on('click', '#membersModal .pagination .page-link', function(e) {
+        e.preventDefault();
+        var roomId = $('.view-members').data('id');
+        var page = $(this).data('page');
+        loadMembers(roomId, page);
+    });
+});
+
+// 加载消息列表
+function loadMessages(roomId, page) {
+    $.ajax({
+        url: '/admin/chats/rooms/' + roomId + '/messages/',
+        data: { page: page },
+        success: function(response) {
+            if (response.status === 'success') {
+                $('#messagesModal .messages-container').html(response.html);
+            }
+        }
+    });
+}
+
+// 加载成员列表
+function loadMembers(roomId, page) {
+    $.ajax({
+        url: '/admin/chats/rooms/' + roomId + '/members/',
+        data: { page: page },
+        success: function(response) {
+            if (response.status === 'success') {
+                $('#membersModal .members-container').html(response.html);
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+{% endblock %} 

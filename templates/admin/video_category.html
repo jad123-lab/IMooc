@@ -1,0 +1,138 @@
+{% extends "admin/base.html" %}
+
+{% block title %}分类管理 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">分类管理</h1>
+    
+    <!-- 添加分类 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">添加分类</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" class="form-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="name" class="form-control mr-2" placeholder="分类名称" required>
+                <input type="text" name="description" class="form-control mr-2" placeholder="分类描述" required>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 分类列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">分类列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>名称</th>
+                            <th>描述</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                        <tr>
+                            <td>{{ category.id }}</td>
+                            <td>{{ category.name }}</td>
+                            <td>{{ category.description }}</td>
+                            <td>{{ category.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm edit-category" 
+                                        data-id="{{ category.id }}"
+                                        data-name="{{ category.name }}"
+                                        data-description="{{ category.description }}">
+                                    编辑
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-category" data-id="{{ category.id }}">
+                                    删除
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑分类模态框 -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑分类</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="category_id" id="edit-category-id">
+                    <div class="form-group">
+                        <label>分类名称</label>
+                        <input type="text" name="name" id="edit-category-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>分类描述</label>
+                        <input type="text" name="description" id="edit-category-description" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 编辑分类
+    $('.edit-category').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var description = $(this).data('description');
+        
+        $('#edit-category-id').val(id);
+        $('#edit-category-name').val(name);
+        $('#edit-category-description').val(description);
+        
+        $('#editCategoryModal').modal('show');
+    });
+    
+    // 删除分类
+    $('.delete-category').click(function() {
+        var categoryId = $(this).data('id');
+        if (confirm('确定要删除这个分类吗？')) {
+            var form = $('<form method="post">')
+                .append($('<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">'))
+                .append($('<input type="hidden" name="action" value="delete">'))
+                .append($('<input type="hidden" name="category_id">').val(categoryId));
+            
+            $('body').append(form);
+            form.submit();
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

@@ -1,0 +1,108 @@
+{% for comment in comments %}
+<div class="comment-item" data-comment-id="{{ comment.id }}">
+    <div class="comment-user">{{ comment.user.username }}</div>
+    <div class="comment-content">{{ comment.content }}</div>
+    <div class="comment-actions">
+        <button class="like-btn {% if comment.is_liked %}liked{% endif %}" onclick="likeComment({{ comment.id }})">
+            <i class="fas fa-thumbs-up"></i>
+            <span class="like-count">{{ comment.likes.count }}</span>
+        </button>
+        <button class="reply-btn" onclick="replyComment({{ comment.id }})">回复</button>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+function likeComment(commentId) {
+    fetch(`/comments/like/${commentId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+            const likeBtn = commentElement.querySelector('.like-btn');
+            const likeCount = commentElement.querySelector('.like-count');
+            
+            if (data.is_liked) {
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.classList.remove('liked');
+            }
+            
+            likeCount.textContent = data.likes_count;
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.comment-item {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+}
+
+.comment-user {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.comment-content {
+    margin-bottom: 10px;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.like-btn.liked {
+    color: #1890ff;
+}
+
+.like-btn:hover {
+    color: #1890ff;
+}
+
+.reply-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+}
+
+.reply-btn:hover {
+    color: #1890ff;
+}
+</style> 

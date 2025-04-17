@@ -1,0 +1,72 @@
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>内容</th>
+                <th>发送者</th>
+                <th>发送时间</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for message in messages %}
+            <tr>
+                <td>{{ message.id }}</td>
+                <td>{{ message.content }}</td>
+                <td>{{ message.user.username }}</td>
+                <td>{{ message.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    {% if message.is_deleted %}
+                    <span class="badge badge-danger">已删除</span>
+                    {% else %}
+                    <span class="badge badge-success">正常</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not message.is_deleted %}
+                    <button class="btn btn-danger btn-sm delete-message" data-id="{{ message.id }}">
+                        删除
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">暂无消息</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if messages.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if messages.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ messages.previous_page_number }}">
+                上一页
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for i in messages.paginator.page_range %}
+        <li class="page-item {% if messages.number == i %}active{% endif %}">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ i }}">
+                {{ i }}
+            </a>
+        </li>
+        {% endfor %}
+        
+        {% if messages.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ messages.next_page_number }}">
+                下一页
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %} 

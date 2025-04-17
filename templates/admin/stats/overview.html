@@ -1,0 +1,297 @@
+{% extends "admin/base.html" %}
+
+{% block title %}统计概览 - {{ block.super }}{% endblock %}
+
+{% block stats_active %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">统计概览</h1>
+        <div>
+            <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="refreshStats">
+                <i class="fas fa-sync fa-sm text-white-50"></i> 刷新数据
+            </button>
+            <a href="{% url 'admin:stats_export' %}" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+                <i class="fas fa-download fa-sm text-white-50"></i> 导出报表
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <!-- 总用户数 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                总用户数</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日新增用户 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                今日新增用户</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ new_users_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-plus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 总视频数 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                总视频数</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_videos }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-video fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日观看次数 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                今日观看次数</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ views_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-eye fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="row">
+        <!-- 用户增长趋势 -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">用户增长趋势</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                            data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                            aria-labelledby="dropdownMenuLink">
+                            <div class="dropdown-header">时间范围：</div>
+                            <a class="dropdown-item" href="#" data-range="7">最近7天</a>
+                            <a class="dropdown-item" href="#" data-range="30">最近30天</a>
+                            <a class="dropdown-item" href="#" data-range="90">最近90天</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="userGrowthChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户分布 -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">用户分布</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4">
+                        <canvas id="userDistributionChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-primary"></i> 普通用户
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-success"></i> 教师
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-info"></i> 管理员
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详细统计 -->
+    <div class="row">
+        <!-- 热门视频 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">热门视频</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>视频标题</th>
+                                    <th>作者</th>
+                                    <th>观看次数</th>
+                                    <th>点赞数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for video in popular_videos %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'admin:video_detail' video.id %}">
+                                            {{ video.title|truncatechars:30 }}
+                                        </a>
+                                    </td>
+                                    <td>{{ video.author.username }}</td>
+                                    <td>{{ video.views }}</td>
+                                    <td>{{ video.likes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 活跃用户 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">活跃用户</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>视频数</th>
+                                    <th>评论数</th>
+                                    <th>获赞数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in active_users %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'admin:user_detail' user.id %}">
+                                            {{ user.username }}
+                                        </a>
+                                    </td>
+                                    <td>{{ user.statistics.total_videos }}</td>
+                                    <td>{{ user.statistics.total_comments }}</td>
+                                    <td>{{ user.statistics.total_likes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 用户增长趋势图
+    var userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+    var userGrowthChart = new Chart(userGrowthCtx, {
+        type: 'line',
+        data: {
+            labels: {{ dates|safe }},
+            datasets: [{
+                label: '新增用户数',
+                data: {{ new_users|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // 用户分布饼图
+    var userDistributionCtx = document.getElementById('userDistributionChart').getContext('2d');
+    var userDistributionChart = new Chart(userDistributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['普通用户', '教师', '管理员'],
+            datasets: [{
+                data: {{ user_distribution|safe }},
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+                hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            cutout: '80%'
+        }
+    });
+
+    // 刷新统计数据
+    $('#refreshStats').on('click', function() {
+        $.get('/admin/stats/refresh/', function(data) {
+            location.reload();
+        });
+    });
+
+    // 切换时间范围
+    $('.dropdown-item[data-range]').on('click', function(e) {
+        e.preventDefault();
+        var range = $(this).data('range');
+        $.get('/admin/stats/growth/', { range: range }, function(data) {
+            userGrowthChart.data.labels = data.dates;
+            userGrowthChart.data.datasets[0].data = data.new_users;
+            userGrowthChart.update();
+        });
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ video.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.chat-container {
+    height: 400px;
+    overflow-y: auto;
+}
+.chat-message {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 5px;
+}
+.chat-message.own {
+    background-color: #e3f2fd;
+    margin-left: 20%;
+}
+.chat-message.other {
+    background-color: #f5f5f5;
+    margin-right: 20%;
+}
+.online-users {
+    font-size: 0.9em;
+    color: #666;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- 视频播放区域 -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <video src="{{ video.file.url }}" class="w-100" controls poster="{{ video.cover.url }}"></video>
+                </div>
+            </div>
+            
+            <!-- 视频信息 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">{{ video.title }}</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted">作者：</span>
+                            <a href="#" class="text-decoration-none">{{ video.author.username }}</a>
+                            <span class="mx-2">•</span>
+                            <span class="text-muted">{{ video.created_at|date:"Y-m-d" }}</span>
+                        </div>
+                        <div>
+                            <span class="me-3"><i class="fas fa-eye"></i> {{ video.view_count }}次观看</span>
+                            <span class="me-3"><i class="fas fa-thumbs-up"></i> {{ video.like_count }}个赞</span>
+                            <button class="btn btn-sm btn-outline-primary" id="likeBtn" data-video-id="{{ video.id }}">
+                                <i class="fas fa-thumbs-up"></i> 点赞
+                            </button>
+                        </div>
+                    </div>
+                    <p class="card-text">{{ video.description|linebreaks }}</p>
+                </div>
+            </div>
+
+            <!-- 评论区 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">评论区</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                    <form id="commentForm" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <textarea class="form-control" name="content" id="commentContent" rows="3" required placeholder="写下你的评论..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">发表评论</button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info">
+                        请<a href="{% url 'users:login' %}">登录</a>后发表评论
+                    </div>
+                    {% endif %}
+
+                    <div id="commentList">
+                        {% for comment in comments %}
+                        <div class="comment mb-3">
+                            <div class="d-flex">
+                                {% if comment.user.avatar %}
+                                    <img src="{{ comment.user.avatar.url }}" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                {% else %}
+                                    <img src="{% static 'images/default-avatar.png' %}" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                {% endif %}
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">{{ comment.user.username }}</h6>
+                                        <small class="text-muted">{{ comment.created_at|date:"Y-m-d H:i" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ comment.content }}</p>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-link text-decoration-none like-comment" 
+                                                data-comment-id="{{ comment.id }}">
+                                            <i class="fas fa-thumbs-up"></i> <span>{{ comment.comment_likes.count }}</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-link text-decoration-none reply-comment" 
+                                                data-comment-id="{{ comment.id }}">
+                                          
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-center text-muted">暂无评论</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天室 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">实时讨论</h5>
+                    <small class="online-users">当前在线: <span id="onlineCount">0</span>人</small>
+                </div>
+                <div class="card-body">
+                    <div class="chat-container" id="chatMessages">
+                        <!-- 聊天消息将通过WebSocket动态添加 -->
+                    </div>
+                    {% if user.is_authenticated %}
+                    <div class="mt-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="messageInput" placeholder="发送消息...">
+                            <button class="btn btn-primary" id="sendMessage">发送</button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mt-3">
+                        请<a href="{% url 'users:login' %}">登录</a>后参与讨论
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 聊天室状态 -->
+<div id="chatStatus" class="text-muted small mb-2">未连接</div>
+
+<!-- Django 模板变量 -->
+<script type="text/javascript">
+    window.INITIAL_DATA = {
+        userId: parseInt("{{ user.id|default:0 }}"),
+        videoId: parseInt("{{ video.id }}"),
+        isAuthenticated: {{ user.is_authenticated|yesno:"true,false" }},
+        username: "{{ user.username }}"
+    };
+</script>
+
+<!-- WebSocket 功能 -->
+<script type="text/javascript">
+(function() {
+    // WebSocket连接
+    let chatSocket = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelay = 3000; // 3秒
+
+    function connectWebSocket() {
+        if (!chatSocket || chatSocket.readyState === WebSocket.CLOSED) {
+            const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsHost = window.location.hostname;
+            const wsUrl = `${wsScheme}://${wsHost}:8001/ws/video/${window.INITIAL_DATA.videoId}/`;
+            
+            try {
+                chatSocket = new WebSocket(wsUrl);
+                
+                chatSocket.onopen = function() {
+                    console.log('WebSocket连接已建立');
+                    reconnectAttempts = 0;
+                    const statusEl = document.getElementById('chatStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '已连接';
+                    }
+                };
+                
+                chatSocket.onclose = function() {
+                    console.log('WebSocket连接已关闭');
+                    const statusEl = document.getElementById('chatStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '连接已断开';
+                    }
+                    
+                    // 尝试重连
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        console.log(`尝试重连 (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        setTimeout(connectWebSocket, reconnectDelay);
+                    }
+                };
+                
+                chatSocket.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    const statusEl = document.getElementById('chatStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '连接失败';
+                    }
+                };
+                
+                chatSocket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    console.log('收到消息:', data);  // 调试日志
+                    
+                    if (data.type === 'connection_established') {
+                        console.log('连接成功:', data.message);
+                        const statusEl = document.getElementById('chatStatus');
+                        if (statusEl) {
+                            statusEl.textContent = '已连接';
+                        }
+                    } else if (data.type === 'online_count') {
+                        const countEl = document.getElementById('onlineCount');
+                        if (countEl) {
+                            countEl.textContent = data.count;
+                        }
+                    } else {
+                        // 普通消息
+                        displayMessage(data);
+                    }
+                };
+            } catch (error) {
+                console.error('WebSocket连接失败:', error);
+                const statusEl = document.getElementById('chatStatus');
+                if (statusEl) {
+                    statusEl.textContent = '连接失败';
+                }
+            }
+        }
+    }
+
+    // 发送消息
+    const sendButton = document.getElementById('sendMessage');
+    if (sendButton) {
+        sendButton.addEventListener('click', function() {
+            const messageInput = document.getElementById('messageInput');
+            if (!messageInput) return;
+            
+            const message = messageInput.value.trim();
+            if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    type: 'message',
+                    content: message
+                }));
+                messageInput.value = '';
+            }
+        });
+    }
+
+    // 显示消息
+    function displayMessage(data) {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${data.user === window.INITIAL_DATA.username ? 'own' : 'other'}`;
+        
+        const timestamp = new Date(data.timestamp).toLocaleTimeString();
+        messageDiv.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <strong>${data.user}</strong>
+                <small class="text-muted">${timestamp}</small>
+            </div>
+            <div>${data.content}</div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 点赞功能
+    document.getElementById('likeBtn')?.addEventListener('click', function() {
+        const videoId = this.dataset.videoId;
+        fetch(`/videos/${videoId}/like/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.innerHTML = `<i class="fas fa-thumbs-up"></i> ${data.likes}`;
+            }
+        });
+    });
+
+    // 评论点赞
+    document.querySelectorAll('.like-comment').forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            fetch('/comments/like/' + commentId + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const likeIcon = this.querySelector('i');
+                    const likeCount = this.querySelector('span');
+                    if (data.is_liked) {
+                        likeIcon.classList.add('text-primary');
+                    } else {
+                        likeIcon.classList.remove('text-primary');
+                    }
+                    likeCount.textContent = data.likes_count;
+                }
+            })
+            .catch(error => {
+                console.error('点赞失败:', error);
+            });
+        });
+    });
+
+    // 评论表单提交
+    const commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const content = document.getElementById('commentContent').value.trim();
+            if (!content) return;
+            
+            fetch('/comments/add/' + window.INITIAL_DATA.videoId + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'content=' + encodeURIComponent(content)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 清空评论框
+                    document.getElementById('commentContent').value = '';
+                    
+                    // 刷新页面或添加新评论到列表
+                    const commentList = document.getElementById('commentList');
+                    if (commentList) {
+                        // 创建新评论元素
+                        const newComment = document.createElement('div');
+                        newComment.className = 'comment mb-3';
+                        
+                        // 使用简单的HTML结构
+                        newComment.innerHTML = `
+                            <div class="d-flex">
+                                <img src="{% static 'images/default-avatar.png' %}" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">${data.comment.user}</h6>
+                                        <small class="text-muted">${data.comment.created_at}</small>
+                                    </div>
+                                    <p class="mb-1">${data.comment.content}</p>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-link text-decoration-none like-comment" 
+                                                data-comment-id="${data.comment.id}">
+                                            <i class="fas fa-thumbs-up"></i> <span>0</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // 如果没有评论，清除"暂无评论"的文本
+                        if (commentList.querySelector('p.text-center.text-muted')) {
+                            commentList.innerHTML = '';
+                        }
+                        
+                        // 插入到顶部
+                        commentList.insertBefore(newComment, commentList.firstChild);
+                        
+                        // 绑定点赞事件
+                        const likeButton = newComment.querySelector('.like-comment');
+                        if (likeButton) {
+                            likeButton.addEventListener('click', function() {
+                                const commentId = this.dataset.commentId;
+                                fetch('/comments/like/' + commentId + '/', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                    },
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        const likeIcon = this.querySelector('i');
+                                        const likeCount = this.querySelector('span');
+                                        if (data.is_liked) {
+                                            likeIcon.classList.add('text-primary');
+                                        } else {
+                                            likeIcon.classList.remove('text-primary');
+                                        }
+                                        likeCount.textContent = data.likes_count;
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('点赞失败:', error);
+                                });
+                            });
+                        }
+                    }
+                } else {
+                    alert('评论发布失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('评论发布错误:', error);
+                alert('评论发布失败，请稍后再试');
+            });
+        });
+    }
+
+    // 初始连接
+    if (window.INITIAL_DATA.isAuthenticated) {
+        connectWebSocket();
+    }
+})();
+</script>
+{% endblock %} 

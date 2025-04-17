@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}首页{% endblock %}
+
+{% block content %}
+<!-- 轮播图 -->
+<div id="carouselExampleIndicators" class="carousel slide mb-4" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active"></button>
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"></button>
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"></button>
+    </div>
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img src="/static/images/banner1.jpg" class="d-block w-100" style="height: 300px; object-fit: cover;" alt="Banner 1">
+        </div>
+        <div class="carousel-item">
+            <img src="/static/images/banner2.jpg" class="d-block w-100" style="height: 300px; object-fit: cover;" alt="Banner 2">
+        </div>
+        <div class="carousel-item">
+            <img src="/static/images/banner3.jpg" class="d-block w-100" style="height: 300px; object-fit: cover;" alt="Banner 3">
+        </div>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
+</div>
+
+<div class="container">
+    <!-- 课程分类 -->
+    <section class="mb-5">
+        <h3 class="mb-4">课程分类</h3>
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-3 mb-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas {{ category.icon }} fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <p class="card-text">{{ category.description }}</p>
+                        <a href="{% url 'videos:category' category.id %}" class="btn btn-outline-primary">查看课程</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 热门课程 -->
+    <section class="mb-5">
+        <h3 class="mb-4">热门课程</h3>
+        <div class="row">
+            {% for video in popular_videos %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    <img src="{{ video.cover.url|default:'/static/images/default-cover.jpg' }}" 
+                         class="card-img-top" alt="{{ video.title }}"
+                         style="height: 160px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ video.title }}</h5>
+                        <p class="card-text text-muted">
+                            <small>
+                                <i class="fas fa-user"></i> {{ video.author.username }}
+                                <i class="fas fa-eye ms-2"></i> {{ video.view_count }}
+                            </small>
+                        </p>
+                        <a href="{% url 'videos:detail' video.id %}" class="btn btn-primary">开始学习</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 最新课程 -->
+    <section class="mb-5">
+        <h3 class="mb-4">最新课程</h3>
+        <div class="row">
+            {% for video in latest_videos %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    <img src="{{ video.cover.url|default:'/static/images/default-cover.jpg' }}" 
+                         class="card-img-top" alt="{{ video.title }}"
+                         style="height: 160px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ video.title }}</h5>
+                        <p class="card-text text-muted">
+                            <small>
+                                <i class="fas fa-user"></i> {{ video.author.username }}
+                                <i class="fas fa-calendar ms-2"></i> {{ video.created_at|date:"Y-m-d" }}
+                            </small>
+                        </p>
+                        <a href="{% url 'videos:detail' video.id %}" class="btn btn-primary">开始学习</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 教师风采 -->
+    <section class="mb-5">
+        <h3 class="mb-4">教师风采</h3>
+        <div class="row">
+            {% for teacher in teachers %}
+            <div class="col-md-3 mb-4">
+                <div class="card text-center h-100">
+                    <img src="{{ teacher.avatar_url }}" class="card-img-top rounded-circle mx-auto mt-3" 
+                         style="width: 120px; height: 120px; object-fit: cover;" alt="{{ teacher.username }}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ teacher.username }}</h5>
+                        <p class="card-text">{{ teacher.verification.description }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %} 

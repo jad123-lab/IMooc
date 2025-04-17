@@ -1,0 +1,167 @@
+{% extends "admin/base.html" %}
+
+{% block title %}用户管理 - {{ block.super }}{% endblock %}
+
+{% block user_active %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">用户管理</h1>
+        <div>
+            <a href="{% url 'admin:user_export' %}" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+                <i class="fas fa-download fa-sm text-white-50"></i> 导出用户
+            </a>
+            <a href="{% url 'admin:user_add' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-plus fa-sm text-white-50"></i> 添加用户
+            </a>
+        </div>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mx-sm-3 mb-2">
+                    <input type="text" class="form-control" name="username" placeholder="用户名" value="{{ request.GET.username }}">
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <select class="form-control" name="role">
+                        <option value="">所有角色</option>
+                        <option value="student" {% if request.GET.role == 'student' %}selected{% endif %}>学生</option>
+                        <option value="teacher" {% if request.GET.role == 'teacher' %}selected{% endif %}>教师</option>
+                        <option value="admin" {% if request.GET.role == 'admin' %}selected{% endif %}>管理员</option>
+                    </select>
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <select class="form-control" name="status">
+                        <option value="">所有状态</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>活跃</option>
+                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>未激活</option>
+                        <option value="banned" {% if request.GET.status == 'banned' %}selected{% endif %}>已禁用</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">搜索</button>
+                <a href="{% url 'admin:user_list' %}" class="btn btn-secondary mb-2 ml-2">重置</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">用户列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" class="select-all">
+                            </th>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>角色</th>
+                            <th>邮箱</th>
+                            <th>手机号</th>
+                            <th>注册时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="select-item" value="{{ user.id }}">
+                            </td>
+                            <td>{{ user.id }}</td>
+                            <td>
+                                <img src="{{ user.avatar.url|default:'/static/admin/img/default-avatar.png' }}" 
+                                     alt="avatar" class="rounded-circle" width="30" height="30">
+                                {{ user.username }}
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if user.role == 'admin' %}danger{% elif user.role == 'teacher' %}success{% else %}primary{% endif %}">
+                                    {{ user.get_role_display }}
+                                </span>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.phone|default:"-" }}</td>
+                            <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="badge badge-{% if user.is_active %}success{% else %}danger{% endif %}">
+                                    {{ user.is_active|yesno:"活跃,未激活" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'admin:user_edit' user.id %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'admin:user_delete' user.id %}" class="btn btn-danger btn-sm delete-confirm">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% if not user.is_active %}
+                                    <a href="{% url 'admin:user_activate' user.id %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'admin:user_deactivate' user.id %}" class="btn btn-warning btn-sm">
+                                        <i class="fas fa-ban"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 批量操作 -->
+            <div class="row">
+                <div class="col-sm-12 col-md-6">
+                    <div class="bulk-actions">
+                        <select class="custom-select" style="width: 200px;">
+                            <option selected>批量操作</option>
+                            <option value="activate">激活</option>
+                            <option value="deactivate">禁用</option>
+                            <option value="delete">删除</option>
+                        </select>
+                        <button class="btn btn-primary bulk-action-btn" disabled>
+                            应用 (<span class="selected-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6">
+                    <!-- 分页 -->
+                    <div class="dataTables_paginate paging_simple_numbers">
+                        <ul class="pagination justify-content-end">
+                            {% if users.has_previous %}
+                            <li class="paginate_button page-item previous">
+                                <a href="?page={{ users.previous_page_number }}" class="page-link">上一页</a>
+                            </li>
+                            {% endif %}
+
+                            {% for i in users.paginator.page_range %}
+                            <li class="paginate_button page-item {% if users.number == i %}active{% endif %}">
+                                <a href="?page={{ i }}" class="page-link">{{ i }}</a>
+                            </li>
+                            {% endfor %}
+
+                            {% if users.has_next %}
+                            <li class="paginate_button page-item next">
+                                <a href="?page={{ users.next_page_number }}" class="page-link">下一页</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

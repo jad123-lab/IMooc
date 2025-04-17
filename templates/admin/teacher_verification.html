@@ -1,0 +1,152 @@
+{% extends "admin/base.html" %}
+
+{% block title %}教师认证{% endblock %}
+
+{% block user_active %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">教师认证</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">待审核申请</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>邮箱</th>
+                            <th>申请时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for verification in verifications %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ verification.user.avatar_url }}" 
+                                         class="rounded-circle me-2"
+                                         style="width: 40px; height: 40px; object-fit: cover;">
+                                    <span>{{ verification.user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ verification.user.email }}</td>
+                            <td>{{ verification.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="badge {% if verification.status == 'pending' %}bg-warning
+                                                  {% elif verification.status == 'approved' %}bg-success
+                                                  {% else %}bg-danger{% endif %}">
+                                    {{ verification.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <!-- 查看证书按钮，点击弹出模态框 -->
+                                    <button type="button" class="btn btn-sm btn-info" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#certificateModal{{ verification.id }}">
+                                        <i class="fas fa-image"></i> 查看证书
+                                    </button>
+                                    
+                                    {% if verification.status == 'pending' %}
+                                    <button type="button" class="btn btn-sm btn-success"
+                                            onclick="verifyTeacher({{ verification.id }}, 'approved')">
+                                        <i class="fas fa-check"></i> 通过
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="verifyTeacher({{ verification.id }}, 'rejected')">
+                                        <i class="fas fa-times"></i> 拒绝
+                                    </button>
+                                    {% endif %}
+                                </div>
+
+                                <!-- 证书查看模态框 -->
+                                <div class="modal fade" id="certificateModal{{ verification.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">教师资格证 - {{ verification.user.username }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-center">
+                                                <img src="{{ verification.certificate.url }}" class="img-fluid" alt="教师资格证">
+                                                <div class="mt-3">
+                                                    <h6>教学经历和专业领域：</h6>
+                                                    <p>{{ verification.description|linebreaks }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">暂无申请</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if verifications.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if verifications.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ verifications.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in verifications.paginator.page_range %}
+                    <li class="page-item {% if verifications.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if verifications.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ verifications.next_page_number }}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function verifyTeacher(verificationId, status) {
+    const action = status === 'approved' ? '通过' : '拒绝';
+    if (confirm(`确定要${action}这个教师认证申请吗？`)) {
+        const formData = new FormData();
+        formData.append('status', status);
+        
+        fetch(`/admin/teachers/verify/${verificationId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

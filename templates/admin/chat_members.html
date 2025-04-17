@@ -1,0 +1,76 @@
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>加入时间</th>
+                <th>最后活跃</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members %}
+            <tr>
+                <td>{{ member.id }}</td>
+                <td>{{ member.user.username }}</td>
+                <td>{{ member.joined_at|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ member.last_active|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    {% if member.is_banned %}
+                    <span class="badge badge-danger">已禁言</span>
+                    {% else %}
+                    <span class="badge badge-success">正常</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if member.user != room.owner %}
+                    <button class="btn btn-sm {% if member.is_banned %}btn-success{% else %}btn-danger{% endif %} toggle-ban" 
+                            data-id="{{ member.id }}"
+                            data-banned="{{ member.is_banned|yesno:'true,false' }}">
+                        {{ member.is_banned|yesno:'解除禁言,禁言' }}
+                    </button>
+                    {% else %}
+                    <span class="text-muted">房主</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">暂无成员</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if members.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if members.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ members.previous_page_number }}">
+                上一页
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for i in members.paginator.page_range %}
+        <li class="page-item {% if members.number == i %}active{% endif %}">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ i }}">
+                {{ i }}
+            </a>
+        </li>
+        {% endfor %}
+        
+        {% if members.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="javascript:void(0)" data-page="{{ members.next_page_number }}">
+                下一页
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %} 

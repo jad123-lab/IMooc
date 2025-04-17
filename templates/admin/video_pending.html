@@ -1,0 +1,204 @@
+{% extends "admin/base.html" %}
+
+{% block title %}待审核视频 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">待审核视频</h1>
+    
+    <!-- 视频列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">待审核视频列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>封面</th>
+                            <th>标题</th>
+                            <th>作者</th>
+                            <th>分类</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in videos %}
+                        <tr>
+                            <td>{{ video.id }}</td>
+                            <td>
+                                <img src="{{ video.cover.url }}" alt="cover" width="80" height="45" 
+                                     style="object-fit: cover;" class="img-thumbnail">
+                            </td>
+                            <td>{{ video.title }}</td>
+                            <td>{{ video.author.username }}</td>
+                            <td>{{ video.category.name }}</td>
+                            <td>{{ video.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-info btn-sm" onclick="previewVideo({{ video.id }})">
+                                        <i class="fas fa-play"></i> 预览
+                                    </button>
+                                    <button class="btn btn-success btn-sm" onclick="approveVideo({{ video.id }})">
+                                        <i class="fas fa-check"></i> 通过
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectVideo({{ video.id }})">
+                                        <i class="fas fa-times"></i> 拒绝
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">暂无待审核视频</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            {% if videos.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if videos.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ videos.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in videos.paginator.page_range %}
+                    <li class="page-item {% if videos.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if videos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ videos.next_page_number }}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 预览模态框 -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">视频预览</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="previewTitle"></h6>
+                <p id="previewDescription" class="text-muted"></p>
+                <div class="ratio ratio-16x9 mb-3">
+                    <video id="previewVideo" controls>
+                        <source src="" type="video/mp4">
+                        您的浏览器不支持视频播放
+                    </video>
+                </div>
+                <img id="previewCover" class="img-fluid mb-3" src="" alt="视频封面">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 预览视频
+function previewVideo(videoId) {
+    fetch(`/admin/videos/${videoId}/detail/`)
+        .then(response => response.json())
+        .then(data => {
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            document.getElementById('previewTitle').textContent = data.title;
+            document.getElementById('previewDescription').textContent = data.description;
+            const video = document.getElementById('previewVideo');
+            video.src = data.video_url;
+            video.load();
+            document.getElementById('previewCover').src = data.cover_url;
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('获取视频信息失败');
+        });
+}
+
+// 通过视频
+function approveVideo(videoId) {
+    if (confirm('确定要通过这个视频吗？')) {
+        const formData = new FormData();
+        formData.append('action', 'approve');
+        
+        fetch(`/admin/videos/${videoId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert(data.message || '操作失败');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败');
+        });
+    }
+}
+
+// 拒绝视频
+function rejectVideo(videoId) {
+    if (confirm('确定要拒绝这个视频吗？')) {
+        const formData = new FormData();
+        formData.append('action', 'reject');
+        
+        fetch(`/admin/videos/${videoId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert(data.message || '操作失败');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败');
+        });
+    }
+}
+
+// 处理预览模态框关闭事件
+document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
+    const video = document.getElementById('previewVideo');
+    video.pause();
+    video.src = '';
+});
+</script>
+{% endblock %} 

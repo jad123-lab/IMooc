@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}上传课程{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">上传新课程</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- 课程封面 -->
+                        <div class="mb-4 text-center">
+                            <img src="/static/images/default-cover.jpg" 
+                                 class="img-fluid mb-3" 
+                                 style="max-height: 200px;" 
+                                 id="cover-preview">
+                            <div class="mb-3">
+                                <label for="cover" class="form-label">课程封面</label>
+                                <input type="file" class="form-control" id="cover" name="cover" 
+                                       accept="image/*" required>
+                                <div class="form-text">建议尺寸：1280x720，支持jpg、png格式</div>
+                            </div>
+                        </div>
+
+                        <!-- 课程信息 -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">课程标题</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category" class="form-label">课程分类</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">选择分类</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">课程简介</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4" required></textarea>
+                        </div>
+
+                        <!-- 课程视频 -->
+                        <div class="mb-3">
+                            <label for="video" class="form-label">课程视频</label>
+                            <input type="file" class="form-control" id="video" name="video" 
+                                   accept="video/*" required>
+                            <div class="form-text">支持mp4格式，大小不超过500MB</div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">上传课程</button>
+                            <a href="{% url 'videos:manage' %}" class="btn btn-outline-secondary ms-2">返回</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 封面预览
+document.getElementById('cover').addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('cover-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
+</script>
+{% endblock %} 

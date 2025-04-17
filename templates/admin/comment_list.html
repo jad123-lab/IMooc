@@ -1,0 +1,149 @@
+{% extends "admin/base.html" %}
+
+{% block title %}评论管理 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">评论管理</h1>
+    
+    <!-- 搜索和筛选 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">搜索和筛选</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-inline mb-3">
+                <input type="text" name="q" class="form-control mr-2" placeholder="搜索评论内容/用户/视频..." value="{{ search_query }}">
+                <select name="video" class="form-control mr-2">
+                    <option value="">所有视频</option>
+                    {% for video in videos %}
+                    <option value="{{ video.id }}" {% if video.id|stringformat:"s" == video_id %}selected{% endif %}>
+                        {{ video.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <select name="is_deleted" class="form-control mr-2">
+                    <option value="">所有状态</option>
+                    <option value="false" {% if is_deleted == 'false' %}selected{% endif %}>正常</option>
+                    <option value="true" {% if is_deleted == 'true' %}selected{% endif %}>已删除</option>
+                </select>
+                <button type="submit" class="btn btn-primary">搜索</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 评论列表 -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">评论列表</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>内容</th>
+                            <th>用户</th>
+                            <th>视频</th>
+                            <th>点赞数</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comment in comments %}
+                        <tr>
+                            <td>{{ comment.id }}</td>
+                            <td>{{ comment.content }}</td>
+                            <td>{{ comment.user.username }}</td>
+                            <td>{{ comment.video.title }}</td>
+                            <td>{{ comment.comment_likes.count }}</td>
+                            <td>
+                                <span class="badge {% if comment.is_deleted %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ comment.is_deleted|yesno:'已删除,正常' }}
+                                </span>
+                            </td>
+                            <td>{{ comment.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if comment.is_deleted %}
+                                <button class="btn btn-success btn-sm toggle-comment" data-id="{{ comment.id }}">
+                                    恢复
+                                </button>
+                                {% else %}
+                                <button class="btn btn-danger btn-sm toggle-comment" data-id="{{ comment.id }}">
+                                    删除
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            {% if comments.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if comments.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ comments.previous_page_number }}&q={{ search_query }}&video={{ video_id }}&is_deleted={{ is_deleted }}">
+                            上一页
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in comments.paginator.page_range %}
+                    <li class="page-item {% if comments.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}&q={{ search_query }}&video={{ video_id }}&is_deleted={{ is_deleted }}">
+                            {{ i }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if comments.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ comments.next_page_number }}&q={{ search_query }}&video={{ video_id }}&is_deleted={{ is_deleted }}">
+                            下一页
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 删除/恢复评论
+    $('.toggle-comment').click(function() {
+        var commentId = $(this).data('id');
+        var action = $(this).text().trim() === '删除' ? '删除' : '恢复';
+        if (confirm('确定要' + action + '这条评论吗？')) {
+            $.ajax({
+                url: '/admin/comments/' + commentId + '/toggle/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

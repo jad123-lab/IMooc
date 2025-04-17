@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}教师认证状态{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">教师认证状态</h5>
+            </div>
+            <div class="card-body">
+                <!-- 状态显示 -->
+                <div class="text-center mb-4">
+                    {% if verification.status == 'pending' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock fa-3x mb-3"></i>
+                            <h4>等待审核</h4>
+                            <p class="mb-0">您的申请正在审核中，请耐心等待</p>
+                        </div>
+                    {% elif verification.status == 'approved' %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <h4>认证通过</h4>
+                            <p class="mb-0">恭喜！您已成为认证教师</p>
+                        </div>
+                    {% elif verification.status == 'rejected' %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle fa-3x mb-3"></i>
+                            <h4>认证未通过</h4>
+                            <p class="mb-0">很抱歉，您的申请未能通过审核</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 申请信息 -->
+                <div class="mb-4">
+                    <h6>申请信息</h6>
+                    <hr>
+                    <dl class="row">
+                        <dt class="col-sm-3">申请时间</dt>
+                        <dd class="col-sm-9">{{ verification.created_at|date:"Y-m-d H:i" }}</dd>
+
+                        <dt class="col-sm-3">更新时间</dt>
+                        <dd class="col-sm-9">{{ verification.updated_at|date:"Y-m-d H:i" }}</dd>
+
+                        <dt class="col-sm-3">教师资格证</dt>
+                        <dd class="col-sm-9">
+                            <img src="{{ verification.certificate.url }}" class="img-fluid" style="max-height: 300px;" alt="教师资格证">
+                        </dd>
+
+                        <dt class="col-sm-3">教学经历</dt>
+                        <dd class="col-sm-9">{{ verification.description|linebreaks }}</dd>
+                    </dl>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="text-center">
+                    {% if verification.status == 'rejected' %}
+                        <a href="{% url 'users:teacher_apply' %}" class="btn btn-primary">重新申请</a>
+                    {% endif %}
+                    <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary ms-2">返回个人中心</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
